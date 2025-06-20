@@ -13,6 +13,7 @@ Documentation of the API: https://developer.terna.it/docs/read/APIs_catalog#en
 ```python
 import terna as trn
 import pandas as pd
+import datetime
 
 # Please follow the API documentation to register an account and create credentials
 key = '<YOUR API KEY>'
