@@ -79,8 +79,10 @@ class TernaPandasClient:
         access_token : str
         """
         # keep current token if still valid
-        if self.token_expiration - datetime.timedelta(seconds=5) > datetime.datetime.now() and self.token:
+        if self.token_expiration - datetime.timedelta(seconds =5) > datetime.datetime.now() and self.token: # Still valid token
+            print ("Using existing token:", self.token)
             return self.token
+
 
         headers = {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -190,227 +192,131 @@ class TernaPandasClient:
                 self.logger.error(f"Request failed with status code {response.status_code}")
                 return None
     
-    def get_total_load(self, start: pd.Timestamp, end: pd.Timestamp, bzone: str) -> pd.DataFrame:
+        
+    def _fetch_with_optional_params(self, endpoint, start=None, end=None, **kwargs):
+        extra = {k: v for k, v in kwargs.items() if v is not None}
+
+        # Chiamata senza start e end se non sono forniti
+        if start is None and end is None:
+            return self.fetch_data(endpoint, extra_params=extra)
+        
+        return self.fetch_data(endpoint, start=start, end=end, extra_params=extra)
+
+
+    def fetch_data(self, item: str, start: pd.Timestamp = None, end: pd.Timestamp = None, 
+               extra_params: Optional[dict] = None) -> pd.DataFrame:
         """
+        General method for fetching different types of data.
+
         Parameters
         ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-        bzone : str
-        
+        item : str
+            API endpoint for the request.
+        start : pd.Timestamp, optional
+            Start date (if applicable).
+        end : pd.Timestamp, optional
+            End date (if applicable).
+        extra_params : dict, optional
+            Additional parameters for the API request.
+
         Returns
         -------
         pd.DataFrame
         """
-        
-        data = TernaPandasClient._build_date_range_payload(start, end)
-        data.update({'biddingZone': bzone})
+        data = {}
 
-        item = 'load/v2.0/total-load'
+        if start is not None and end is not None:
+            data['dateFrom'] = start.strftime('%d/%m/%Y')
+            data['dateTo'] = end.strftime('%d/%m/%Y')
 
-        df = self._base_request(item, data)
-        return df
+        if extra_params:
+            data.update(extra_params)
 
-    def get_market_load(self, start: pd.Timestamp, end: pd.Timestamp, bzone: str) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-        bzone : str
-        
-        Returns
-        -------
-        pd.DataFrame
-        """
-        
-        data = TernaPandasClient._build_date_range_payload(start, end)
-        data.update({'biddingZone': bzone})
-
-        item = 'load/v2.0/market-load'
-
-        df = self._base_request(item, data)
-        return df
+        print(f"\n{item}")
+        return self._base_request(item, data)
     
-    def get_actual_generation(self, start: pd.Timestamp, end: pd.Timestamp, gen_type: str) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-        gen_type : str
-        
-        Returns
-        -------
-        pd.DataFrame
-        """
-
-        item = 'generation/v2.0/actual-generation'
-
-        data = TernaPandasClient._build_date_range_payload(start, end)
-        data.update({'type': gen_type})
-
-        df = self._base_request(item, data)
-        return df
+    def get_total_load(self, start, end, bzone=None):
+        return self._fetch_with_optional_params('load/v2.0/total-load', start, end, biddingZone=bzone)
     
-    def get_renewable_generation(self, start: pd.Timestamp, end: pd.Timestamp, res_gen_type: str) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-        res_gen_type : str
-        
-        Returns
-        -------
-        pd.DataFrame
-        """
-
-        item = 'generation/v2.0/renewable-generation'
-
-        data = TernaPandasClient._build_date_range_payload(start, end)
-        data.update({'type': res_gen_type})
-
-        df = self._base_request(item, data)
-        return df
+    def get_market_load(self, start, end, bzone=None):
+        return self._fetch_with_optional_params('load/v2.0/market-load', start, end, biddingZone=bzone)
     
-    def get_energy_balance(self, start: pd.Timestamp, end: pd.Timestamp, type: str) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-        type : str
-        
-        Returns
-        -------
-        pd.DataFrame
-        """
-
-        item = 'generation/v2.0/energy-balance'
-        
-        data = TernaPandasClient._build_date_range_payload(start, end)
-        data.update({'type': type})
-
-        df = self._base_request(item, data)
-        return df
+    def get_peak_valley_load(self, start, end):
+        return self._fetch_with_optional_params('load/v2.0/peak-valley-load', start, end)
     
-    def get_installed_capacity(self, year: int, gen_type: str) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        gen_type : str
-        
-        Returns
-        -------
-        pd.DataFrame
-        """
-        
-        item = 'generation/v2.0/installed-capacity'
-
-        data = {
-            'year': year,
-            'type': gen_type
-        }
-
-        df = self._base_request(item, data)
-        return df
-        
-    def get_scheduled_foreign_exchange(self, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-        
-        Returns
-        -------
-        pd.DataFrame
-        """
-
-        item = 'transmission/v2.0/scheduled-foreign-exchange'
-
-        data = TernaPandasClient._build_date_range_payload(start, end)
-
-        df = self._base_request(item, data)
-        return df
+    def get_peak_valley_load_details(self, start, end):
+        return self._fetch_with_optional_params('load/v2.0/peak-valley-load-details', start, end)
     
-    def get_scheduled_internal_exchange(self, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-        
-        Returns
-        -------
-        pd.DataFrame
-        """
-        
-        item = 'transmission/v2.0/scheduled-internal-exchange'
-
-        data = TernaPandasClient._build_date_range_payload(start, end)
-
-        df = self._base_request(item, data)
-        return df
-        
-    def get_physical_foreign_flow(self, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-        
-        Returns
-        -------
-        pd.DataFrame
-        """
-        
-        item = 'transmission/v2.0/physical-foreign-flow'
-
-        data = TernaPandasClient._build_date_range_payload(start, end)
-
-        df = self._base_request(item, data)
-        return df
+    def get_actual_generation(self, start, end, gen_type=None):
+        return self._fetch_with_optional_params('generation/v2.0/actual-generation', start, end, type=gen_type)
     
-    def get_physical_internal_flow(self, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
-        """
+    def get_renewable_generation(self, start, end, res_gen_type=None):
+        return self._fetch_with_optional_params('generation/v2.0/renewable-generation', start, end, type=res_gen_type)
+    
+    def get_energy_balance(self, start, end, energy_bal_type=None):
+        return self._fetch_with_optional_params('generation/v2.0/energy-balance', start, end, type=energy_bal_type)
+    
+    def get_installed_capacity(self, year=None, gen_type=None):
+        return self._fetch_with_optional_params('generation/v2.0/installed-capacity', year=year, type=gen_type)
+    
+    def get_scheduled_foreign_exchange(self, start, end):
+        return self._fetch_with_optional_params('transmission/v2.0/scheduled-foreign-exchange', start, end)
+    
+    def get_scheduled_internal_exchange(self, start, end):
+        return self._fetch_with_optional_params('transmission/v2.0/scheduled-internal-exchange', start, end)
+    
+    def get_physical_foreign_flow(self, start, end):
+        return self._fetch_with_optional_params('transmission/v2.0/physical-foreign-flow', start, end)
+    
+    def get_physical_internal_flow(self, start, end):
+        return self._fetch_with_optional_params('transmission/v2.0/physical-internal-flow', start, end)
+    
+    def get_IMCEI(self, year=None, month=None):
+        return self._fetch_with_optional_params('load/v2.0/monthly-index-industrial-electrical-consumption', year=year, month=month)
+
+    # Rimossa
+    # def get_secondary_adjustment_levels(self, start, end):  
+    #     return self._fetch_with_optional_params('market-and-fees/v1.0/secondary-adjustment-levels', start, end)
+  
+    # def get_wind_forecast(self, start, end):
+    #     return self.fetch_data('market/v1.0/input/wind-production-forecast', start, end)
+ 
+    
+    # May 2025 
+      
+    def get_forecast_load(self, start, end, sessionType = None):
+       return self._fetch_with_optional_params('market/v1.0/input/forecast-load', start, end, sessionType = sessionType)
+    
+    def get_costs(self, start, end, sessionType = None, direction = None):
+        return self._fetch_with_optional_params('market/v1.0/output/costs', start, end, sessionType = sessionType, direction = direction)
+    
+    def get_quantity(self, start, end, sessionType = None, direction = None):
+        return self._fetch_with_optional_params('market/v1.0/output/quantity', start, end, sessionType = sessionType, direction = direction)
+    
+    def get_accepted_offers(self, start, end, sessionType = None, direction = None):
+        return self._fetch_with_optional_params('market/v1.0/output/accepted-offers', start, end, sessionType = sessionType, direction = direction)
+    
+    def get_submitted_offers(self, start, end, sessionType = None, direction = None):
+        return self._fetch_with_optional_params('market/v1.0/input/submitted-offers', start, end, sessionType = sessionType, direction = direction)
+    
+    def get_prices(self, start, end, priceType = None, sessionType = None, direction = None):
+        '''
         Parameters
         ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
+        .session_type	MSD1
+        .type		    MARGINAL
+        .direction	    UP
         
-        Returns
-        -------
-        pd.DataFrame
-        """
-        
-        item = 'transmission/v2.0/physical-internal-flow'
+        '''
+        return self._fetch_with_optional_params('market/v1.0/output/prices', start, end, priceType = priceType, sessionType = sessionType, direction = direction)
 
-        data = TernaPandasClient._build_date_range_payload(start, end)
+    def get_plant_outages(self, start, end):
+        return self._fetch_with_optional_params('outages/v1.0/generation-unit-unavailability', start, end)
 
-        df = self._base_request(item, data)
-        return df
-
-    @staticmethod
-    def _build_date_range_payload(start: pd.Timestamp, end: pd.Timestamp) -> dict:
-        """
-        Internal helper to build a date range dictionary formatted as 'DD/MM/YYYY'.
-
-        Parameters
-        ----------
-        start : pd.Timestamp
-        end : pd.Timestamp
-
-        Returns
-        -------
-        dict
-            A dictionary with formatted 'dateFrom' and 'dateTo' strings.
-        """
-        return {
-            'dateFrom': start.strftime('%d/%m/%Y'),
-            'dateTo': end.strftime('%d/%m/%Y'),
-        }
+    # June 2025 
+    
+    def get_detail_available_capacity(self, start, end):
+        return self._fetch_with_optional_params('adequacy/v1.0/detail-available-capacity', start, end)
 
     @staticmethod
     def _adjust_tz(dt, tz):
@@ -422,5 +328,3 @@ class TernaPandasClient:
 
     def __repr__(self):
         return f"<TernaPandasClient(api_key={self.api_key[:4]}***, api_secret={self.api_secret[:4]}***)>"
-    
-     
