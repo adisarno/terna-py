@@ -19,7 +19,7 @@ import datetime
 key = '<YOUR API KEY>'
 secret = '<YOUR API SECRET>'
 
-client = TernaPandasClient(api_key=key,api_secret=secret)
+client = trn.TernaPandasClient(api_key=key,api_secret=secret)
 
 ###########################################################################
 
