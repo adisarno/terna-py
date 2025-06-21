@@ -168,30 +168,34 @@ class TernaPandasClient:
                     key = list(json.keys())[0]
                     df = pd.json_normalize(json[key])
                     # Normalize column name to 'Date' if 'date' exists
-                    if 'date' in df.columns and 'Date' not in df.columns:
-                        df.rename(columns={'date': 'Date'}, inplace=True)
-                    if 'Date' in df.columns or 'date' in df.columns:
-                        df['Date'] = pd.to_datetime(df['Date'])
-                        df['Date'] = df['Date'].map(lambda x: TernaPandasClient._adjust_tz(x, tz="Europe/Rome"))
-                        df.sort_values(by='Date', inplace=True)
-                        df.index = df['Date']
-                        df.index.name = None
-                        df.drop(columns=['Date'], inplace=True)
+                    if 'Date' in df.columns and 'date' not in df.columns:
+                        df.rename(columns={'Date': 'date'}, inplace=True)
+                    if 'date' in df.columns or 'Date' in df.columns:
+                        '''
+                        # df['date'] = pd.to_datetime(df['Date'])
+                        # df['date'] = df['date'].map(lambda x: TernaPandasClient._adjust_tz(x, tz="Europe/Rome"))
+                        
+                        df['date'] = pd.to_datetime(df['date']).dt.tz_localize('Europe/Rome', ambiguous='NaT')
+                        '''                        
+                        # df.sort_values(by='date', inplace=True)
+                        # df.set_index('date', inplace=True)
+                        pass
                     elif 'Year' in df.columns:
-                        df.index = df['Year']
-                        df.drop(columns=['Year'], inplace=True)
+                        # df.set_index('Year', inplace=True)
+                        pass
                     for col in df.columns:
-                        try:
-                            df[col] = pd.to_numeric(df[col])
-                        except (ValueError, TypeError):
-                            pass
+                        if col != 'date':  # <-- evita di convertire la colonna Date in numeric
+                          try:
+                              df[col] = pd.to_numeric(df[col])
+                          except (ValueError, TypeError):
+                              pass
                     return df
                 else:
                     return None
             else:
                 self.logger.error(f"Request failed with status code {response.status_code}")
                 return None
-    
+            
         
     def _fetch_with_optional_params(self, endpoint, start=None, end=None, **kwargs):
         extra = {k: v for k, v in kwargs.items() if v is not None}
