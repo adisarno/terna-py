@@ -68,7 +68,8 @@ class TernaPandasClient:
         self.token_expiration = datetime.datetime.now()
         self.time_of_last_request = time.monotonic() - 1
 
-    def _request_token(self, data: Dict = {}) -> str:
+    def _request_token(self, data: Dict = {}) -> Optional[str]:
+
         """
         Parameters
         ----------
