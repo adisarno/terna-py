@@ -323,6 +323,11 @@ class TernaPandasClient:
     def get_detail_available_capacity(self, start, end):
         return self._fetch_with_optional_params('adequacy/v1.0/detail-available-capacity', start, end)
 
+    # January 2026
+    
+    def get_transit_limit(self, start, end, sessionType = None):
+        return self._fetch_with_optional_params('market/v1.0/input/transit-limit', start, end, sessionType = sessionType)
+    
     @staticmethod
     def _adjust_tz(dt, tz):
         delta = dt.minute % 15
